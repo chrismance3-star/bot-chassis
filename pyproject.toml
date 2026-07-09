@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bot-chassis"
+version = "0.1.0"
+description = "The boring 90% of every bot, done for you: supervision, heartbeats, alerting, watchdog, state."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+dependencies = []          # stdlib only — that's the point
+
+[project.scripts]
+chassis = "chassis.__main__:main"
+
+[tool.setuptools]
+packages = ["chassis"]
+
+[tool.ruff]
+line-length = 110

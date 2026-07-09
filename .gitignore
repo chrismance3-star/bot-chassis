@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.chassis/
+*.log
+*.log.*
+.env
+dist/
+build/
+*.egg-info/
+.claude-flow/

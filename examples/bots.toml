@@ -1,0 +1,12 @@
+# Fleet declaration for the example bot.
+#   python -m chassis run examples/bots.toml     # supervise
+#   python -m chassis watch examples/bots.toml   # independent watchdog
+
+[chassis]
+alerts = ["console"]
+
+[[bot]]
+name = "uptime"
+command = "python3 uptime_bot.py"
+heartbeat_max_minutes = 10
+log = "uptime.log"
