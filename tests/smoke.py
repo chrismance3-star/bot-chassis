@@ -9,6 +9,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from chassis import Bot, StateFile, load
+from chassis.dashboard import build_status
 from chassis.watchdog import Watchdog, process_pattern
 
 
@@ -93,6 +94,15 @@ def test_watchdog_once(tmpdir):
     # cooldown: second pass finds the same issues but they are not "new"
     state = wd.state.load()
     assert all(not wd._should_alert(state, k) for k in keys)
+
+    # dashboard status built from the same artifacts: dead bot, stale heartbeat,
+    # watchdog snapshot picked up
+    status = build_status(load(path))
+    bot = status["bots"][0]
+    assert bot["name"] == "ghost" and not bot["running"] and not bot["healthy"]
+    assert bot["heartbeat_age_s"] >= 590
+    assert not status["supervisor_running"]
+    assert status["watchdog"] and len(status["watchdog"]["issues"]) >= 2
 
 
 if __name__ == "__main__":

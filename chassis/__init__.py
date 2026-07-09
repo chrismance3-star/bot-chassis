@@ -7,7 +7,7 @@
 #   Supervisor — spawn + restart a fleet declared in bots.toml
 #   Watchdog   — independent external health monitor
 #
-# CLI: python -m chassis {init,run,watch}
+# CLI: python -m chassis {init,run,watch,dash}
 
 from .config import ChassisConfig, load
 from .notify import Notifier

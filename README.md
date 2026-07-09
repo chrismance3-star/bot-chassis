@@ -60,6 +60,7 @@ Then:
 ```
 python -m chassis run     # spawn everything; restart crashes; give up on crash-loops; alert on hangs
 python -m chassis watch   # independent watchdog — still texts you when the supervisor itself dies
+python -m chassis dash    # mission control: http://localhost:8899 status page (+ /api/status JSON)
 python -m chassis init    # starter bots.toml + hello bot
 ```
 
@@ -105,6 +106,7 @@ chassis/
   runner.py       Bot — the decorator API and job loop
   supervisor.py   fleet spawn/restart/heartbeat supervision
   watchdog.py     independent external health monitor
+  dashboard.py    one-file status page + JSON API (localhost only)
   notify.py       alert fan-out: console / sms / webhook
   state.py        crash-safe JSON state
   config.py       bots.toml loader

@@ -1,4 +1,4 @@
-# python -m chassis {init,run,watch}
+# python -m chassis {init,run,watch,dash}
 
 import argparse
 import logging
@@ -6,6 +6,7 @@ import os
 import sys
 
 from . import config as config_mod
+from .dashboard import serve
 from .supervisor import Supervisor
 from .watchdog import Watchdog
 
@@ -55,11 +56,14 @@ def main():
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("init", help="write a starter bots.toml + hello bot")
     for name, help_text in [("run", "spawn and supervise the fleet"),
-                            ("watch", "run the independent watchdog")]:
+                            ("watch", "run the independent watchdog"),
+                            ("dash", "serve the status dashboard")]:
         p = sub.add_parser(name, help=help_text)
         p.add_argument("config", nargs="?", default="bots.toml")
         if name == "watch":
             p.add_argument("--once", action="store_true", help="single pass, then exit")
+        if name == "dash":
+            p.add_argument("--port", type=int, default=8899)
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)s  %(message)s")
@@ -76,6 +80,8 @@ def main():
         Supervisor(cfg).run()
     elif args.cmd == "watch":
         Watchdog(cfg).run(once=args.once)
+    elif args.cmd == "dash":
+        serve(cfg, args.port)
 
 
 if __name__ == "__main__":
