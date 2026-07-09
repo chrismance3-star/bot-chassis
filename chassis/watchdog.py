@@ -20,6 +20,7 @@
 import json
 import logging
 import os
+import shlex
 import subprocess
 import time
 import urllib.request
@@ -32,6 +33,14 @@ from .state import StateFile
 log = logging.getLogger("watchdog")
 
 ERROR_MARKERS = ("ERROR", "CRITICAL", "Traceback")
+
+
+def process_pattern(command: str) -> str:
+    """What to pgrep for. The live cmdline often resolves the executable
+    differently than written ("python3 x.py" runs as ".../Python x.py"),
+    so match on the arguments and only fall back to the whole command."""
+    parts = shlex.split(command)
+    return " ".join(parts[1:]) if len(parts) > 1 else command
 
 
 class Watchdog:
@@ -71,7 +80,7 @@ class Watchdog:
         issues = []
         for bot in self.config.bots:
             try:
-                r = subprocess.run(["pgrep", "-f", bot.command],
+                r = subprocess.run(["pgrep", "-f", "--", process_pattern(bot.command)],
                                    capture_output=True, timeout=10)
                 if r.returncode != 0:
                     issues.append((f"proc:{bot.name}",

@@ -9,7 +9,7 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from chassis import Bot, StateFile, load
-from chassis.watchdog import Watchdog
+from chassis.watchdog import Watchdog, process_pattern
 
 
 def test_state_roundtrip():
@@ -63,6 +63,14 @@ def test_bot_runs_jobs_and_contains_errors(tmpdir):
     assert bot.state.load()["k"] == "v"
 
 
+def test_process_pattern():
+    # match on the script, not the interpreter: "python3 x.py" may run as
+    # ".../Python x.py", so the interpreter token must not be in the pattern
+    assert process_pattern("python3 uptime_bot.py") == "uptime_bot.py"
+    assert process_pattern("python3 -m mypkg --flag") == "-m mypkg --flag"
+    assert process_pattern("single-binary") == "single-binary"
+
+
 def test_watchdog_once(tmpdir):
     path = os.path.join(tmpdir, "bots.toml")
     hb_dir = os.path.join(tmpdir, ".chassis")
@@ -90,6 +98,7 @@ def test_watchdog_once(tmpdir):
 if __name__ == "__main__":
     test_state_roundtrip()
     test_config_load_and_validation()
+    test_process_pattern()
     with tempfile.TemporaryDirectory() as d:
         test_bot_runs_jobs_and_contains_errors(d)
     with tempfile.TemporaryDirectory() as d:
