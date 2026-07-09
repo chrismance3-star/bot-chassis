@@ -78,6 +78,17 @@ def account_equity():   # anything that returns [(key, message)]
     ...
 ```
 
+## Troubleshooting
+
+**Every HTTPS request fails instantly with `CERTIFICATE_VERIFY_FAILED`** (bot
+jobs, the sms/webhook channels): your Python has no CA certificate bundle —
+common with python.org installers on macOS. Either run the installer's
+`Install Certificates.command`, or point Python at the system bundle:
+
+```
+export SSL_CERT_FILE=/etc/ssl/cert.pem
+```
+
 ## Provenance
 
 Extracted from a live multi-bot trading system where every one of these
