@@ -11,6 +11,7 @@
 import logging
 import os
 import shlex
+import signal
 import subprocess
 import sys
 import time
@@ -120,6 +121,12 @@ class Supervisor:
     # ── Main loop ─────────────────────────────────────────────────
 
     def run(self):
+        # SIGTERM (system shutdown, kill, task managers) must take the same
+        # clean path as Ctrl+C — otherwise bots are orphaned and the lock stays
+        def _terminate(signum, frame):
+            raise KeyboardInterrupt
+        signal.signal(signal.SIGTERM, _terminate)
+
         self.acquire_lock()
         try:
             self.start_all()
