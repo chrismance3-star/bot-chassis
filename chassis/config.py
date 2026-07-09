@@ -14,7 +14,9 @@ class BotSpec:
     name: str
     command: str                      # shell command that runs the bot
     heartbeat_max_minutes: float = 0  # 0 = don't check heartbeat freshness
+    heartbeat_file: str = ""          # override — adopt a pre-existing bot's heartbeat path
     log: str = ""                     # log file the watchdog scans for error spikes
+    log_max_silence_hours: float = 0  # alert if the log's mtime is older (0 = don't check)
 
 
 @dataclass
@@ -34,6 +36,9 @@ class ChassisConfig:
         return rel if os.path.isabs(rel) else os.path.join(self.root, rel)
 
     def heartbeat_file(self, bot_name: str) -> str:
+        for bot in self.bots:
+            if bot.name == bot_name and bot.heartbeat_file:
+                return self.path(bot.heartbeat_file)
         return os.path.join(self.path(self.status_dir), f"{bot_name}.heartbeat")
 
 
@@ -59,7 +64,9 @@ def load(config_path: str) -> ChassisConfig:
             name=entry["name"],
             command=entry["command"],
             heartbeat_max_minutes=float(entry.get("heartbeat_max_minutes", 0)),
+            heartbeat_file=entry.get("heartbeat_file", ""),
             log=entry.get("log", ""),
+            log_max_silence_hours=float(entry.get("log_max_silence_hours", 0)),
         ))
 
     known = {f.name for f in ChassisConfig.__dataclass_fields__.values()} - {"root", "bots"}

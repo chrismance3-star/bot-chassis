@@ -105,6 +105,25 @@ class Watchdog:
                 issues.append((f"heartbeat:{bot.name}", f"{bot.name} heartbeat file missing"))
         return issues
 
+    def check_log_silence(self) -> list:
+        # A bot can be alive and heartbeating yet not doing its job. A log
+        # that stops growing past the bot's normal cycle cadence means work
+        # stopped happening, whatever the process table says.
+        issues = []
+        for bot in self.config.bots:
+            if not bot.log or not bot.log_max_silence_hours:
+                continue
+            path = self.config.path(bot.log)
+            try:
+                age_h = (time.time() - os.path.getmtime(path)) / 3600
+                if age_h > bot.log_max_silence_hours:
+                    issues.append((f"silence:{bot.name}",
+                                   f"{bot.name} log silent for {age_h:.1f}h "
+                                   f"(cycle expected within {bot.log_max_silence_hours:g}h)"))
+            except FileNotFoundError:
+                issues.append((f"silence:{bot.name}", f"{bot.name} log file missing ({bot.log})"))
+        return issues
+
     def check_stop_file(self) -> list:
         path = self.config.path(self.config.stop_file)
         if os.path.exists(path):
@@ -162,7 +181,8 @@ class Watchdog:
     def run_checks(self) -> list:
         state = self.state.load()
         issues = (self.check_processes() + self.check_heartbeats()
-                  + self.check_stop_file() + self.check_log_errors(state))
+                  + self.check_log_silence() + self.check_stop_file()
+                  + self.check_log_errors(state))
         for check in self.custom_checks:
             try:
                 issues += list(check())

@@ -79,18 +79,28 @@ def test_watchdog_once(tmpdir):
     with open(path, "w") as f:
         f.write('[chassis]\nalerts=["console"]\n'
                 '[[bot]]\nname="ghost"\ncommand="definitely-not-running-xyz"\n'
-                'heartbeat_max_minutes=1\n')
-    # stale heartbeat
-    hb = os.path.join(hb_dir, "ghost.heartbeat")
+                'heartbeat_max_minutes=1\nheartbeat_file="legacy/.hb"\n'
+                'log="ghost.log"\nlog_max_silence_hours=1\n')
+    # stale heartbeat at an adopted (non-default) location
+    os.makedirs(os.path.join(tmpdir, "legacy"))
+    hb = os.path.join(tmpdir, "legacy", ".hb")
     with open(hb, "w") as f:
         f.write("0")
     os.utime(hb, (time.time() - 600, time.time() - 600))
+    # log last written 2h ago — silent past its 1h cadence
+    log_path = os.path.join(tmpdir, "ghost.log")
+    with open(log_path, "w") as f:
+        f.write("fine\n")
+    os.utime(log_path, (time.time() - 7200, time.time() - 7200))
 
-    wd = Watchdog(load(path))
+    cfg = load(path)
+    assert cfg.heartbeat_file("ghost") == hb
+    wd = Watchdog(cfg)
     issues = wd.run_checks()
     keys = {k for k, _ in issues}
     assert "proc:ghost" in keys, keys
     assert "heartbeat:ghost" in keys, keys
+    assert "silence:ghost" in keys, keys
     # cooldown: second pass finds the same issues but they are not "new"
     state = wd.state.load()
     assert all(not wd._should_alert(state, k) for k in keys)
