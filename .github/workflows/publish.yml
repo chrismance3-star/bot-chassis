@@ -1,0 +1,39 @@
+# Publishes to PyPI via trusted publishing (no API token stored anywhere).
+# One-time setup on PyPI: Account -> Publishing -> add a "pending publisher"
+# for project bot-chassis, owner chrismance3-star, repo bot-chassis,
+# workflow publish.yml, environment pypi.
+# After that, creating a GitHub release publishes that version.
+
+name: publish
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python tests/smoke.py
+      - run: pip install build && python -m build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write   # required for PyPI trusted publishing
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

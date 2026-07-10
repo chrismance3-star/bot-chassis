@@ -5,11 +5,31 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "bot-chassis"
 version = "0.1.0"
-description = "The boring 90% of every bot, done for you: supervision, heartbeats, alerting, watchdog, state."
+description = "The boring 90% of every bot, done for you: supervision, heartbeats, alerting, watchdog, dashboard, state."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "Proprietary" }
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Christopher Mance" }]
+keywords = ["bot", "supervisor", "watchdog", "scheduler", "alerting", "automation", "daemon"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: POSIX",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: System :: Monitoring",
+    "Topic :: Utilities",
+]
 dependencies = []          # stdlib only — that's the point
+
+[project.urls]
+Homepage = "https://github.com/chrismance3-star/bot-chassis"
+Issues = "https://github.com/chrismance3-star/bot-chassis/issues"
 
 [project.scripts]
 chassis = "chassis.__main__:main"

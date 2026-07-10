@@ -1,6 +1,10 @@
-# chassis
+# bot-chassis
 
 **The boring 90% of every bot, done for you.**
+
+```
+pip install bot-chassis
+```
 
 Anyone who has run a long-lived automation — a trading bot, an uptime monitor, a
 scraper, a report generator — ends up rebuilding the same plumbing: a scheduler
@@ -58,11 +62,13 @@ log = "uptime.log"
 Then:
 
 ```
-python -m chassis run     # spawn everything; restart crashes; give up on crash-loops; alert on hangs
-python -m chassis watch   # independent watchdog — still texts you when the supervisor itself dies
-python -m chassis dash    # mission control: http://localhost:8899 status page (+ /api/status JSON)
-python -m chassis init    # starter bots.toml + hello bot
+chassis run     # spawn everything; restart crashes; give up on crash-loops; alert on hangs
+chassis watch   # independent watchdog — still texts you when the supervisor itself dies
+chassis dash    # mission control: http://localhost:8899 status page (+ /api/status JSON)
+chassis init    # starter bots.toml + hello bot
 ```
+
+(`python -m chassis` works everywhere the `chassis` script does.)
 
 The **supervisor** restarts bots that die (with rapid-crash backoff so a
 broken bot doesn't restart forever) and alerts on stale heartbeats. The
@@ -97,7 +103,12 @@ features was added because its absence caused a real incident: a bot that ran
 dead for a day with no alert (supervision), a hung process that passed the
 liveness poll (heartbeats), burst SMS silently collapsed by the carrier
 (delivery slots), a crash mid-write corrupting state (atomic saves), a launcher
-that couldn't report its own death (external watchdog).
+that couldn't report its own death (external watchdog). That trading fleet
+runs on bot-chassis today — this package is its production supervisor, not a
+side project's abstraction of one.
+
+Linux and macOS. Python 3.11+. Zero dependencies, and that's a promise, not
+a current status.
 
 ## Layout
 
@@ -113,3 +124,7 @@ chassis/
 examples/
   uptime_bot.py   a complete non-trading bot in ~40 lines
 ```
+
+## License
+
+MIT.
