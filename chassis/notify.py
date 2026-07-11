@@ -1,7 +1,10 @@
 # chassis/notify.py — Pluggable alert delivery
 #
 # Alerts fire in a background thread so they never block the bot's work
-# loop, and each delivery retries before giving up. Channels:
+# loop, and each delivery retries with exponential backoff before giving
+# up. An atexit flush lets in-flight alerts finish before the interpreter
+# dies — an alert fired right before sys.exit (the crash-alert path) used
+# to be silently dropped along with its daemon thread. Channels:
 #
 #   console — always available, prints to stderr
 #   sms     — email-to-SMS gateway via SMTP (how most carriers accept texts)
@@ -19,6 +22,7 @@
 # in a burst, so each sender thread reserves a delivery slot at least
 # MIN_SEND_GAP seconds after the previous one.
 
+import atexit
 import json
 import logging
 import os
@@ -31,12 +35,19 @@ from email.mime.text import MIMEText
 
 log = logging.getLogger(__name__)
 
-MAX_RETRIES = 3
-RETRY_DELAY = 4     # seconds between retries
+# Retry waits double each attempt (4s, 8s, 16s, 32s) — a fixed short
+# schedule only covers a few seconds of outage, and real DNS blips outlive it.
+MAX_RETRIES = 5
+RETRY_DELAY = 4     # seconds before the first retry
 MIN_SEND_GAP = 12   # seconds between SMS deliveries
+
+FLUSH_TIMEOUT = 90  # max seconds to hold the process open for undelivered alerts
 
 _slot_lock = threading.Lock()
 _next_slot = [0.0]
+
+_pending_lock = threading.Lock()
+_pending: set[threading.Thread] = set()
 
 
 def _reserve_slot():
@@ -49,6 +60,7 @@ def _reserve_slot():
 
 
 def _with_retries(label: str, fn):
+    delay = RETRY_DELAY
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             fn()
@@ -57,8 +69,31 @@ def _with_retries(label: str, fn):
         except Exception as e:
             log.warning(f"{label} alert attempt {attempt}/{MAX_RETRIES} failed: {e}")
             if attempt < MAX_RETRIES:
-                time.sleep(RETRY_DELAY)
+                time.sleep(delay)
+                delay *= 2
     log.error(f"{label} alert permanently failed after {MAX_RETRIES} attempts")
+
+
+def flush(timeout: float = FLUSH_TIMEOUT):
+    """
+    Blocks until every in-flight alert has finished sending, or timeout.
+    Registered with atexit so alerts fired just before the process exits
+    (the crash-alert path) still get delivered.
+    """
+    deadline = time.monotonic() + timeout
+    while True:
+        with _pending_lock:
+            alive = [t for t in _pending if t.is_alive()]
+        if not alive:
+            return
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            log.warning(f"Exiting with {len(alive)} alert(s) still undelivered")
+            return
+        alive[0].join(timeout=min(remaining, 1.0))
+
+
+atexit.register(flush)
 
 
 # ── Channels ──────────────────────────────────────────────────────
@@ -126,4 +161,8 @@ class Notifier:
         stamp = datetime.now().astimezone().strftime("%-I:%M%p").lower()
         full = f"[{stamp}] {message}"
         for name in self.channels:
-            threading.Thread(target=_CHANNELS[name], args=(full,), daemon=True).start()
+            t = threading.Thread(target=_CHANNELS[name], args=(full,), daemon=True)
+            with _pending_lock:
+                _pending.difference_update({p for p in _pending if not p.is_alive()})
+                _pending.add(t)
+            t.start()
